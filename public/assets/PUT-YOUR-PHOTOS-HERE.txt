@@ -1,0 +1,12 @@
+Drop your ELJMC photos here (any missing file falls back to a gradient or icon, nothing breaks):
+
+  eljmc-logo.png      school logo (login, top bar)
+  eljmc-auth.jpg      photo behind the login screen
+  eljmc-cover.jpg     profile cover photo
+  eljmc-banner-1.jpg  the 3 photos that rotate behind the Home banner
+  eljmc-banner-2.jpg
+  eljmc-banner-3.jpg
+
+Pet pictures go in /public/pets/ and are named after the pet in the database:
+  "Golden Cat" -> public/pets/golden-cat.png  (.webp and .jpg also work)
+Also replace public/icons/icon-192.png and icon-512.png (app icon) with your logo.
