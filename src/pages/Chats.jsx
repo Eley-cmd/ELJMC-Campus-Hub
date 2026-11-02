@@ -1,15 +1,16 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, Send, Users, MessageSquarePlus, LogOut, Flag, Search, Check, UserRound, Reply, Pencil, Trash2, Forward, Copy, MoreHorizontal, X, Hash } from 'lucide-react'
+import { ChevronLeft, Send, Users, MessageSquarePlus, LogOut, Flag, Search, Check, UserRound, Reply, Pencil, Trash2, Forward, Copy, MoreHorizontal, X, Hash, Image as ImageIcon, Smile, ThumbsUp } from 'lucide-react'
 import { chat, channels, friends, profile } from '../api'
 import { chatx } from '../lib/chatx'
 import { useQuery, usePoll } from '../ui/hooks'
 import { ChatRowSkeleton, MessageSkeleton, Skeletons, ListRowSkeleton } from '../ui/Skeleton'
-import { Avatar, Empty, ErrorBox, Sheet, Field, Confirm, PageTitle } from '../components/ui'
+import { Avatar, Empty, ErrorBox, Sheet, Field, Confirm, PageTitle, Img } from '../components/ui'
 import ReportSheet from '../components/Report'
 import { useApp } from '../app/context'
 import { ago, clock, dateTime } from '../lib/format'
 import { errText } from '../lib/errors'
+import { uploadImage } from '../lib/cloudinary'
 
 /* ------------------------------ new chat sheet ------------------------------ */
 function NewChat({ onClose }) {
@@ -43,21 +44,19 @@ export function Chats() {
   const [q, setQ] = useState(''); const needle = q.trim().toLowerCase()
   const list = (data || []).filter((c) => !needle || c.title?.toLowerCase().includes(needle) || c.last?.content?.toLowerCase().includes(needle))
   usePoll(reload, 15000)
-  // The "Start a chat" button sits below the message or below the list, like "Open my shop" in Shop
-  const startBtn = <button type="button" className="btn sm" onClick={() => setNew(true)}><MessageSquarePlus size={15} /> Start a chat</button>
   return <>
     <div className="shopsearch"><div className="inp"><Search size={18} /><input placeholder="Search chats" value={q} onChange={(e) => setQ(e.target.value)} />
       {q && <button type="button" className="ibtn" aria-label="Clear" onClick={() => setQ('')}><X size={16} /></button>}</div></div>
+    <div className="center" style={{ padding: '2px 0 12px' }}><button type="button" className="btn sm" onClick={() => setNew(true)}><MessageSquarePlus size={15} /> Start a chat</button></div>
     {loading ? <Skeletons n={6} C={ChatRowSkeleton} /> : error && !data ? <ErrorBox error={error} retry={reload} />
-      : !data?.length ? <Empty Icon={MessageSquarePlus} title="No chats yet" hint="Message a friend or classmate.">{startBtn}</Empty>
+      : !data?.length ? <Empty Icon={MessageSquarePlus} title="No chats yet" hint="Tap Start a chat above to message a friend or classmate." />
       : !list.length ? <Empty Icon={Search} title="No chats found" hint="Try another word." />
-      : <><div className="card flush">{list.map((c) => <div key={c.id} className="chatwrap">
+      : <div className="card flush">{list.map((c) => <div key={c.id} className="chatwrap">
         <Link to={`/chat/${c.id}`} className="row pad chatrow">
           <Avatar p={c.peer || { display_name: c.title }} size={48} dot />
           <div className="grow minw"><div className="row between"><b className="ell">{c.title}</b><span className="mute small">{c.last && ago(c.last.created_at)}</span></div>
             <div className="mute ell">{c.last?.content || 'No messages yet'}</div></div></Link>
-        <button type="button" className="ibtn chatdel" aria-label={`Delete chat with ${c.title}`} onClick={() => setDel(c)}><Trash2 size={18} /></button></div>)}</div>
-        {!q && <div className="center" style={{ padding: '4px 0 16px' }}>{startBtn}</div>}</>}
+        <button type="button" className="ibtn chatdel" aria-label={`Delete chat with ${c.title}`} onClick={() => setDel(c)}><Trash2 size={18} /></button></div>)}</div>}
     {newOpen && <NewChat onClose={() => setNew(false)} />}
     {del && <Confirm title="Delete chat" text={`Delete "${del.title}"? It disappears from your chats. Other people in a group keep it, and a new message can bring it back.`} action="Delete" danger onClose={() => setDel(null)}
       onYes={async () => { try { await chatx.deleteChat(del.id); toast('Chat deleted'); reload() } catch (e) { toast(errText(e), 'err') } }} />}
@@ -73,7 +72,12 @@ const linkify = (t) => String(t || '').split(/(https?:\/\/\S+)/g).map((x, i) => 
     return <a key={i} className="msglink" href={x} target="_blank" rel="noreferrer">{x}</a> } catch { return x }
 })
 
-const GAP = 20 * 60 * 1000 // a new time label appears after 20 minutes of silence
+const GAP = 20 * 60 * 1000
+// a message that is only a Cloudinary link is a photo; a message of 1-3 emoji is shown big (like Messenger)
+const isPhoto = (c) => /^https:\/\/res\.cloudinary\.com\/\S+$/i.test(c || '')
+const isBigEmoji = (c) => /^(?:\p{Extended_Pictographic}[\u200d\ufe0f]*){1,3}$/u.test((c || '').trim())
+const preview = (c) => (isPhoto(c) ? 'Photo' : c)
+const EMOJIS = ['😀','😂','🥹','😍','🥰','😘','😎','🤔','😭','😅','😉','🙃','😇','🤗','😴','🤯','👍','👎','👏','🙏','💪','🙌','👋','🤝','❤️','🔥','✨','🎉','💯','😡','🥳','😢','📚','✏️','🎓','☕','🍕','⚽','🎵','👀'] // a new time label appears after 20 minutes of silence
 
 /* ------------------------------- forward sheet ------------------------------- */
 function ForwardSheet({ m, onClose }) {
@@ -89,7 +93,7 @@ function ForwardSheet({ m, onClose }) {
     catch (e) { toast(errText(e), 'err') } finally { setBusy(false) }
   }
   return <Sheet title="Forward to" onClose={onClose} footer={<button type="button" className="btn" disabled={busy || !sel.length} onClick={go}>{busy ? 'Sending' : `Send${sel.length ? ' (' + sel.length + ')' : ''}`}</button>}>
-    <div className="msgprev ell">{m.content}</div>
+    <div className="msgprev ell">{preview(m.content)}</div>
     <div className="inp"><Search size={18} /><input placeholder="Search chats" value={q} onChange={(e) => setQ(e.target.value)} /></div>
     {(mine.loading && !mine.data) ? <Skeletons n={4} C={ListRowSkeleton} /> : !list.length ? <Empty Icon={UserRound} title="No chats found" />
       : list.map((c) => { const on = sel.includes(c.id)
@@ -105,6 +109,7 @@ export function ThreadBody({ id, members, isDirect }) {
   const { me, toast } = useApp()
   const [msgs, setMsgs] = useState(null); const [err, setErr] = useState(null); const [text, setText] = useState(''); const [sending, setSending] = useState(false)
   const [senders, setSenders] = useState({}); const [reply, setReply] = useState(null); const [editing, setEditing] = useState(null)
+  const [emojiOpen, setEmojiOpen] = useState(false); const [upBusy, setUpBusy] = useState(false); const fileRef = useRef()
   const [menu, setMenu] = useState(null); const [fwd, setFwd] = useState(null); const [del, setDel] = useState(null); const [typers, setTypers] = useState({}); const [flash, setFlash] = useState(null)
   const end = useRef(); const stick = useRef(true); const inRef = useRef(); const lp = useRef(); const typingApi = useRef(null); const lastPing = useRef(0)
 
@@ -154,7 +159,7 @@ export function ThreadBody({ id, members, isDirect }) {
     if (v && Date.now() - lastPing.current > 2000) { lastPing.current = Date.now(); typingApi.current?.ping() }
   }
   const send = async () => {
-    const v = text.trim(); if (!v || sending || !me) return; setSending(true)
+    const v = text.trim(); if (!v || sending || !me) return; setSending(true); setEmojiOpen(false)
     if (editing) {
       try { await chatx.edit(editing.id, v); merge([{ ...editing, content: v, edited_at: new Date().toISOString() }]); setEditing(null); setText('') }
       catch (e) { toast(errText(e), 'err') } finally { setSending(false) }
@@ -163,6 +168,16 @@ export function ThreadBody({ id, members, isDirect }) {
     const rp = reply; setText(''); setReply(null)
     try { const m = await chatx.send(id, me.id, v, { replyTo: rp?.id }); merge([{ ...m, __t: Date.now() }]); stick.current = true }
     catch (e) { setText(v); setReply(rp); toast(errText(e), 'err') } finally { setSending(false) }
+  }
+  // like button and photos send straight away
+  const quickSend = async (v) => {
+    if (!me) return; const rp = reply; setReply(null)
+    try { const m = await chatx.send(id, me.id, v, { replyTo: rp?.id }); merge([{ ...m, __t: Date.now() }]); stick.current = true }
+    catch (e) { setReply(rp); toast(errText(e), 'err') }
+  }
+  const pickPhoto = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return
+    setUpBusy(true); try { await quickSend(await uploadImage(file, 900)) } catch (err) { toast(errText(err), 'err') } finally { setUpBusy(false) }
   }
   const startReply = (m) => { setEditing(null); setReply(m); inRef.current?.focus() }
   const startEdit = (m) => { setReply(null); setEditing(m); setText(m.content); inRef.current?.focus() }
@@ -183,6 +198,7 @@ export function ThreadBody({ id, members, isDirect }) {
           const close = (a, b) => a && b && a.sender_id === b.sender_id && Math.abs(new Date(b.created_at) - new Date(a.created_at)) < GAP
           const sameP = close(prev, m), sameN = close(m, next), sep = !prev || new Date(m.created_at) - new Date(prev.created_at) >= GAP
           const gone = !!m.deleted_at, rp = m.reply_to_id ? byId.get(m.reply_to_id) : null
+          const photo = !gone && isPhoto(m.content), big = !gone && !photo && isBigEmoji(m.content)
           const more = <button type="button" className="msg-more" aria-label="Message options" onClick={() => setMenu(m)}><MoreHorizontal size={16} /></button>
           return <Fragment key={m.id}>
             {sep && <div className="tsep">{dateTime(m.created_at)}</div>}
@@ -191,13 +207,13 @@ export function ThreadBody({ id, members, isDirect }) {
               {!mine && (!sameN ? <Avatar p={u || { display_name: '?' }} size={30} /> : <span style={{ width: 30, flex: 'none' }} />)}
               <div className="bub-wrap">
                 {!mine && !sameP && !isDirect && <small className="mute">{u?.display_name || '...'}</small>}
-                <div className={'bubble' + (gone ? ' gone-b' : '')} onContextMenu={(e) => { e.preventDefault(); setMenu(m) }}
+                <div className={'bubble' + (gone ? ' gone-b' : '') + (photo ? ' img-b' : '') + (big ? ' emoji-b' : '')} onContextMenu={(e) => { e.preventDefault(); setMenu(m) }}
                   onPointerDown={() => press(m)} onPointerUp={unpress} onPointerLeave={unpress} onPointerCancel={unpress}>
                   {gone ? <i className="gone">{mine ? 'You removed a message' : 'Message removed'}</i> : <>
                     {m.forwarded && <div className="fwdlabel"><Forward size={11} /> Forwarded</div>}
                     {m.reply_to_id && <button type="button" className="quote" onClick={() => rp && jump(rp.id)}>
-                      <b>{rp ? nameOf(rp.sender_id) : 'Message'}</b><span>{rp ? (rp.deleted_at ? 'Message removed' : rp.content) : 'Original message'}</span></button>}
-                    {linkify(m.content)}{m.edited_at && <span className="edited">edited</span>}</>}
+                      <b>{rp ? nameOf(rp.sender_id) : 'Message'}</b><span>{rp ? (rp.deleted_at ? 'Message removed' : preview(rp.content)) : 'Original message'}</span></button>}
+                    {photo ? <Img src={m.content} w={520} className="chatimg" /> : linkify(m.content)}{m.edited_at && <span className="edited">edited</span>}</>}
                 </div>
                 {!sameN && <small className="mute time">{clock(m.created_at)}</small>}
               </div>
@@ -213,19 +229,27 @@ export function ThreadBody({ id, members, isDirect }) {
 
     {(reply || editing) && <div className="thread-bar">
       {editing ? <><Pencil size={16} /><div><b>Editing message</b><div className="mute ell">{editing.content}</div></div></>
-        : <><Reply size={16} /><div><b>Replying to {nameOf(reply.sender_id)}</b><div className="mute ell">{reply.content}</div></div></>}
+        : <><Reply size={16} /><div><b>Replying to {nameOf(reply.sender_id)}</b><div className="mute ell">{preview(reply.content)}</div></div></>}
       <button type="button" className="ibtn" aria-label="Cancel" onClick={cancelBar}><X size={18} /></button></div>}
-    <div className="thread-f"><input ref={inRef} className="msg-in" placeholder={editing ? 'Edit your message' : 'Type here a message'} maxLength={4000} value={text} onChange={onType}
-      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } else if (e.key === 'Escape') cancelBar() }} />
-      <button type="button" className="send" onClick={send} disabled={!text.trim() || sending} aria-label={editing ? 'Save' : 'Send'}>{editing ? <Check size={20} /> : <Send size={20} />}</button></div>
+    <div className="thread-f">
+      {emojiOpen && <div className="emojipop">{EMOJIS.map((e) => <button type="button" key={e} onClick={() => { setText((t) => t + e); inRef.current?.focus() }}>{e}</button>)}</div>}
+      {!editing && <><button type="button" className="fbtn" aria-label="Send a photo" disabled={upBusy} onClick={() => fileRef.current?.click()}><ImageIcon size={22} /></button>
+        <input ref={fileRef} hidden type="file" accept="image/*" onChange={pickPhoto} /></>}
+      <div className="fpill"><input ref={inRef} className="msg-in" placeholder={editing ? 'Edit your message' : upBusy ? 'Sending photo...' : 'Aa'} maxLength={4000} value={text} onChange={onType}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } else if (e.key === 'Escape') { setEmojiOpen(false); cancelBar() } }} />
+        <button type="button" className="fbtn" aria-label="Emoji" onClick={() => setEmojiOpen((o) => !o)}><Smile size={22} /></button></div>
+      {text.trim() || editing
+        ? <button type="button" className="fbtn" onClick={send} disabled={!text.trim() || sending} aria-label={editing ? 'Save' : 'Send'}>{editing ? <Check size={22} /> : <Send size={22} />}</button>
+        : <button type="button" className="fbtn like" onClick={() => quickSend('👍')} aria-label="Send a like"><ThumbsUp size={22} /></button>}
+    </div>
 
     {menu && <Sheet title="Message" onClose={() => setMenu(null)}>
-      {!menu.deleted_at && <div className="msgprev">{menu.content}</div>}
+      {!menu.deleted_at && <div className="msgprev">{preview(menu.content)}</div>}
       {!menu.deleted_at && <>
         <button type="button" className="msgact" onClick={() => act(startReply)}><Reply size={20} /> Reply</button>
         <button type="button" className="msgact" onClick={() => act(setFwd)}><Forward size={20} /> Forward</button>
         <button type="button" className="msgact" onClick={() => act(copy)}><Copy size={20} /> Copy</button>
-        {menu.sender_id === me?.id && <button type="button" className="msgact" onClick={() => act(startEdit)}><Pencil size={20} /> Edit</button>}
+        {menu.sender_id === me?.id && !isPhoto(menu.content) && <button type="button" className="msgact" onClick={() => act(startEdit)}><Pencil size={20} /> Edit</button>}
         {canDelete(menu) && <button type="button" className="msgact dng" onClick={() => act(setDel)}><Trash2 size={20} /> {menu.sender_id === me?.id ? 'Remove' : 'Remove (moderator)'}</button>}</>}
       {menu.deleted_at && <p className="mute" style={{ margin: 0 }}>This message was removed.</p>}
     </Sheet>}

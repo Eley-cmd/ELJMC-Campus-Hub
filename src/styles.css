@@ -282,8 +282,6 @@ input[type=range]{accent-color:var(--brand);width:100%;padding:0}
 
 
 
-
-
 /* ===== Messenger-style chat. APPEND this to the END of your main CSS file (src/index.css or styles.css). ===== */
 
 .thread .msg{display:flex;gap:8px;align-items:flex-end;margin-top:10px;position:relative}
@@ -348,6 +346,22 @@ input[type=range]{accent-color:var(--brand);width:100%;padding:0}
 .chatwrap .chatrow{flex:1;min-width:0;border:0}
 .chatdel{color:var(--mute);margin-right:8px;flex:none}
 .chatdel:hover{color:var(--red)}
+
+/* ===== Facebook / Messenger style message box. APPEND to the end of your main CSS. ===== */
+.thread,.thread.embedded{position:relative}
+.thread-f{gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));align-items:center}
+.fbtn{width:40px;height:40px;border-radius:50%;border:0;background:none;color:var(--brand);display:grid;place-items:center;flex:none;padding:0;transition:transform .12s,background .15s}
+.fbtn:hover{background:var(--soft)}.fbtn:active:not(:disabled){transform:scale(.9)}.fbtn:disabled{opacity:.4}
+.fpill{flex:1;min-width:0;display:flex;align-items:center;background:var(--bg);border-radius:99px;padding-right:2px}
+.thread-f .fpill .msg-in{flex:1;min-width:0;background:none!important;border:0!important;box-shadow:none!important;outline:0!important;padding:10px 6px 10px 16px!important}
+.emojipop{position:absolute;left:8px;bottom:calc(100% + 6px);width:min(340px,calc(100% - 16px));display:grid;grid-template-columns:repeat(8,1fr);gap:2px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:20;animation:up .15s}
+.emojipop button{border:0;background:none;font-size:22px;line-height:1;padding:6px 0;border-radius:8px}.emojipop button:hover{background:var(--soft)}
+/* photos and big emoji inside the thread */
+.thread .bubble.img-b{padding:3px;background:transparent!important;border:0}
+.chatimg{width:min(240px,62vw);aspect-ratio:4/3;border-radius:16px;overflow:hidden}
+.thread .bubble.emoji-b{background:transparent!important;font-size:42px;line-height:1.1;padding:0 2px}
+
+
 
 /* ===== Auth screens (dark violet, fits any phone with no scrolling) =====
    Replace the whole old auth block (from "/* ===== Auth screens" to the end of that block)
