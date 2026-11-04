@@ -362,6 +362,64 @@ input[type=range]{accent-color:var(--brand);width:100%;padding:0}
 .thread .bubble.emoji-b{background:transparent!important;font-size:42px;line-height:1.1;padding:0 2px}
 
 
+/* ===== ELJMC violet theme (same look as the login screens) =====
+   Paste this at the VERY END of your main CSS file. It only overrides colours and shapes,
+   so nothing you added before it is removed. */
+
+:root{--brand:#7c3aed;--au1:#6d28d9;--au2:#8b5cf6;--bg:#f3f0fb;--ink:#1c1233;--mute:#6f6788;--line:#e6e0f4;--sk:#ebe6f6;--sk2:#f7f4fd}
+[data-theme=dark]{--brand:#a78bfa;--bg:#0d0a1a;--card:#161226;--ink:#ece8fa;--mute:#9a92b8;--line:#2a2340;--sk:#211a35;--sk2:#2e2548}
+
+/* ---- top bar: the dark violet header with a wave, like the login screen ---- */
+.topbar{background:linear-gradient(120deg,#140733,#4c1d95 62%,#6d28d9);color:#fff;border-bottom:0;backdrop-filter:none;border-radius:0}
+.topbar::after{content:"";position:absolute;left:0;right:0;top:calc(100% - 1px);height:16px;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 16' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23140733'/%3E%3Cstop offset='.62' stop-color='%234c1d95'/%3E%3Cstop offset='1' stop-color='%236d28d9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 0H480V4C400 18 330 2 240 9S80 16 0 5Z' fill='url(%23g)'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.topbar .ibtn,.topbar .brand,.topbar .brand b{color:#fff}
+.topbar .ibtn:hover{background:rgba(255,255,255,.14)}
+.topbar .ptschip{background:rgba(255,255,255,.16);color:#fff}
+.topbar .brand-ico{background:rgba(255,255,255,.2)}
+.page{padding-top:18px}
+
+/* ---- buttons: gradient pills ---- */
+.btn{border-radius:99px;background:linear-gradient(90deg,var(--au1),var(--au2));color:#fff;font-weight:600;box-shadow:0 6px 16px rgba(76,29,149,.26)}
+.btn.ghost{background:transparent;color:var(--au1);border:1.5px solid var(--au2);box-shadow:none}
+[data-theme=dark] .btn.ghost{color:#c4b5fd}
+.btn.danger{background:var(--red);color:#fff;box-shadow:none}
+.btn:active:not(:disabled){transform:scale(.97)}
+.send,.cartbar{background:linear-gradient(90deg,var(--au1),var(--au2))}
+.msg.mine .bubble{background:linear-gradient(135deg,var(--au1),var(--au2));border-color:transparent}
+.seg .on{background:linear-gradient(90deg,var(--au1),var(--au2))}
+.bottomnav a.on::before{background:linear-gradient(90deg,var(--au1),var(--au2))}
+
+/* ---- inputs: pills ---- */
+.input,select,select.input{border-radius:99px!important;padding-left:18px;padding-right:18px}
+textarea,textarea.input{border-radius:18px!important}
+.inp{border-radius:99px;background:color-mix(in srgb,var(--ink) 5%,var(--card));border-color:transparent;padding:0 16px}
+.inp:focus-within,.input:focus{border-color:var(--au2);box-shadow:0 0 0 2px color-mix(in srgb,var(--au2) 30%,transparent)}
+.chips button{border-radius:99px}
+
+/* ---- cards float with soft round corners ---- */
+.card{margin:0 12px 12px;border:1px solid var(--line);border-radius:20px;box-shadow:0 6px 20px rgba(76,29,149,.07)}
+.profile-card{margin-top:-34px}
+.page-title h1{font-weight:700}
+
+/* ---- profile: violet header with the wave, no photo banner ---- */
+.cover{height:140px;background:linear-gradient(120deg,#140733,#4c1d95 62%,#6d28d9);position:relative;overflow:hidden}
+/* the cover photo, with buttons to change it */
+.cover-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cover-actions{position:absolute;right:12px;top:12px;z-index:2;display:flex;gap:8px}
+.cover-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:99px;padding:7px 12px;background:rgba(0,0,0,.45);color:#fff;font-size:13px;font-weight:600;backdrop-filter:blur(6px)}
+.cover-btn:disabled{opacity:.6}
+.cover .avbusy{z-index:1}
+.cover-wave{z-index:1;position:absolute;left:0;right:0;bottom:-1px;width:100%;height:46px}
+.cover-wave .w1{fill:#4c1d95;opacity:.6}.cover-wave .w2{fill:var(--bg)}
+.avbusy{position:absolute;inset:0;border-radius:50%;background:linear-gradient(90deg,rgba(0,0,0,.35) 25%,rgba(255,255,255,.25) 50%,rgba(0,0,0,.35) 75%);background-size:200% 100%;animation:sh 1.3s infinite}
+.avpick:disabled{opacity:.9}
+
+/* ---- last active ---- */
+.pdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mute);margin-right:6px}
+.pdot.on{background:var(--green)}
+
+.profile-top .gear{right:auto;left:12px;z-index:3}
 
 /* ===== Auth screens (dark violet, fits any phone with no scrolling) =====
    Replace the whole old auth block (from "/* ===== Auth screens" to the end of that block)
@@ -468,13 +526,13 @@ input::-webkit-contacts-auto-fill-button{visibility:hidden!important;display:non
 
 /* ---- top bar: the dark violet header with a wave, like the login screen ---- */
 .topbar{background:linear-gradient(120deg,#140733,#4c1d95 62%,#6d28d9);color:#fff;border-bottom:0;backdrop-filter:none;border-radius:0}
-.topbar::after{content:"";position:absolute;left:0;right:0;top:calc(100% - 1px);height:16px;pointer-events:none;
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 16' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23140733'/%3E%3Cstop offset='.62' stop-color='%234c1d95'/%3E%3Cstop offset='1' stop-color='%236d28d9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 0H480V4C400 18 330 2 240 9S80 16 0 5Z' fill='url(%23g)'/%3E%3C/svg%3E") center/100% 100% no-repeat}
 .topbar .ibtn,.topbar .brand,.topbar .brand b{color:#fff}
 .topbar .ibtn:hover{background:rgba(255,255,255,.14)}
 .topbar .ptschip{background:rgba(255,255,255,.16);color:#fff}
-.topbar .brand-ico{background:rgba(255,255,255,.2)}
-.page{padding-top:18px}
+.topbar .brand{gap:10px;font-size:18px;font-weight:700}
+.topbar .brand img{width:34px;height:34px;border-radius:50%;background:#fff;padding:3px;object-fit:contain;flex:none}
+.topbar .brand-ico{background:rgba(255,255,255,.2);width:34px;height:34px;border-radius:50%}
+.page{padding-top:12px}
 
 /* ---- buttons: gradient pills ---- */
 .btn{border-radius:99px;background:linear-gradient(90deg,var(--au1),var(--au2));color:#fff;font-weight:600;box-shadow:0 6px 16px rgba(76,29,149,.26)}
@@ -496,13 +554,18 @@ textarea,textarea.input{border-radius:18px!important}
 
 /* ---- cards float with soft round corners ---- */
 .card{margin:0 12px 12px;border:1px solid var(--line);border-radius:20px;box-shadow:0 6px 20px rgba(76,29,149,.07)}
-.profile-card{margin-top:-34px}
+.profile-card{margin-top:-30px}
 .page-title h1{font-weight:700}
 
 /* ---- profile: violet header with the wave, no photo banner ---- */
 .cover{height:140px;background:linear-gradient(120deg,#140733,#4c1d95 62%,#6d28d9);position:relative;overflow:hidden}
-.cover img{display:none}
-.cover-wave{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:46px}
+/* the cover photo, with buttons to change it */
+.cover-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cover-actions{position:absolute;right:12px;top:12px;z-index:2;display:flex;gap:8px}
+.cover-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:99px;padding:7px 12px;background:rgba(0,0,0,.45);color:#fff;font-size:13px;font-weight:600;backdrop-filter:blur(6px)}
+.cover-btn:disabled{opacity:.6}
+.cover .avbusy{z-index:1}
+.cover-wave{display:none;z-index:1;position:absolute;left:0;right:0;bottom:-1px;width:100%;height:46px}
 .cover-wave .w1{fill:#4c1d95;opacity:.6}.cover-wave .w2{fill:var(--bg)}
 .avbusy{position:absolute;inset:0;border-radius:50%;background:linear-gradient(90deg,rgba(0,0,0,.35) 25%,rgba(255,255,255,.25) 50%,rgba(0,0,0,.35) 75%);background-size:200% 100%;animation:sh 1.3s infinite}
 .avpick:disabled{opacity:.9}
@@ -510,3 +573,89 @@ textarea,textarea.input{border-radius:18px!important}
 /* ---- last active ---- */
 .pdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mute);margin-right:6px}
 .pdot.on{background:var(--green)}
+
+.profile-top .gear{right:auto;left:12px;z-index:3}
+
+/* ---- bottom nav: soft pill behind the active icon (nothing changes size) ---- */
+.bottomnav a svg{position:relative;z-index:1}
+.bottomnav a.on::before{top:6px;left:50%;right:auto;width:58px;height:32px;margin-left:-29px;border-radius:99px;background:var(--soft)}
+
+/* ===== Messenger-style chats (list + chat box + Anonymous chat) =====
+   Paste at the VERY END of your main CSS (after theme-violet.css). If you pasted the older chat-box.css,
+   delete that block first and use this one instead. */
+
+/* ---------- chat list ---------- */
+.msgr-head{display:flex;align-items:center;gap:6px;padding:4px 16px 6px}
+.msgr-head h1{font-size:30px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(90deg,var(--au1),var(--au2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.msgr-ic{display:inline-grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:none;color:var(--ink);padding:0}
+.msgr-ic:hover{background:var(--soft)}
+.msgr-search{display:flex;align-items:center;gap:10px;margin:6px 16px 10px;padding:0 16px;height:44px;border-radius:99px;background:color-mix(in srgb,var(--ink) 7%,var(--card));color:var(--mute)}
+.msgr-search input{flex:1;min-width:0;border:0!important;background:none!important;padding:0!important;height:100%;font-size:16px;color:var(--ink);outline:0!important;box-shadow:none!important;border-radius:0!important}
+.msgr-list{display:grid}
+.msgr-row{display:flex;align-items:center;padding-right:10px}
+.msgr-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:9px 6px 9px 16px}
+.msgr-info{flex:1;min-width:0;display:grid;gap:1px}
+.msgr-info b{font-size:16px;font-weight:600}
+.msgr-info span{color:var(--mute);font-size:14px}
+.msgr-time{flex:none;align-self:flex-start;margin-top:6px;color:var(--mute);font-size:13px}
+.msgr-del{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:none;color:var(--mute);display:grid;place-items:center;padding:0;opacity:.75}
+.msgr-del:hover{background:var(--soft);opacity:1}
+.msgr-row:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.msgr-empty{display:grid;justify-items:center;gap:10px;text-align:center;padding:90px 24px;color:var(--mute)}
+.msgr-empty h2{font-size:26px;color:var(--mute);margin-bottom:14px}
+.msgr-empty p{margin:0;display:flex;align-items:center;gap:8px;font-size:16px}
+.msgr-empty .msgr-ic{width:34px;height:34px;color:var(--mute)}
+
+/* ---------- chat box: fills the screen, only the message list scrolls ---------- */
+.thread:not(.embedded){position:fixed;left:0;right:0;top:var(--vvt,0px);height:var(--vvh,100dvh);z-index:40;display:flex;flex-direction:column;
+  background:var(--card);margin:0;max-width:none;border-radius:0;overflow:hidden}
+@media(min-width:640px) and (max-width:959px){.thread:not(.embedded){left:50%;right:auto;width:640px;transform:translateX(-50%)}}
+@media(min-width:960px){.thread:not(.embedded){position:relative;top:auto;left:auto;right:auto;height:calc(100dvh - var(--top-h) - 40px);z-index:auto;
+  margin:0 12px;border-radius:20px;border:1px solid var(--line)}}
+
+/* header: white, violet icons (like Messenger) */
+.thread-h{flex:none;display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px 6px;background:var(--card);color:var(--ink);border-bottom:1px solid var(--line)}
+.thread-h .ibtn{color:var(--au1)}
+[data-theme=dark] .thread-h .ibtn{color:#c4b5fd}
+.thread-h .ibtn:hover{background:var(--soft)}
+.thread-h b{color:var(--ink);font-size:17px}.thread-h .mute{color:var(--mute)}
+@media(min-width:960px){.thread-h{padding-top:10px}}
+
+/* top of a private chat: cover, picture, name, Add friend / Profile */
+.thread-intro{margin-bottom:auto;display:grid;justify-items:center;gap:3px;text-align:center;padding:16px 12px 8px;position:relative}
+.intro-cover{width:100%;height:96px;object-fit:cover;border-radius:16px;margin-bottom:-48px}
+.intro-av{position:relative;z-index:1;border:4px solid var(--card);border-radius:50%;background:var(--card);margin-bottom:6px}
+.thread-intro h2{font-size:22px;font-weight:700}
+.intro-acts{display:flex;gap:26px;margin-top:12px}
+.intro-acts a,.intro-acts button{display:grid;justify-items:center;gap:6px;border:0;background:none;color:var(--ink);font-size:13px;padding:0}
+.intro-acts span{width:48px;height:48px;border-radius:50%;background:color-mix(in srgb,var(--ink) 8%,var(--card));display:grid;place-items:center}
+.lockline{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:18px;max-width:300px;color:var(--mute);font-size:12px}
+
+/* messages */
+.thread-b{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:2px;padding:6px 10px 8px;background:var(--card)}
+.msg{display:flex;align-items:flex-end;gap:6px;margin-top:8px}
+.msg.g-top{margin-top:0}
+.msg.mine{justify-content:flex-end}
+.bub-wrap{display:grid;max-width:78%;min-width:0}
+.msg.mine .bub-wrap{justify-items:end}
+.bubble{max-width:100%;padding:8px 13px;border:0;border-radius:18px;line-height:1.35;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;
+  background:color-mix(in srgb,var(--ink) 9%,var(--card));color:var(--ink)}
+.msg.mine .bubble{background:linear-gradient(135deg,var(--au1),var(--au2));color:#fff}
+.msg:not(.mine).g-top .bubble{border-top-left-radius:5px}
+.msg:not(.mine).g-bot .bubble{border-bottom-left-radius:5px}
+.msg.mine.g-top .bubble{border-top-right-radius:5px}
+.msg.mine.g-bot .bubble{border-bottom-right-radius:5px}
+.bubble .msglink{color:inherit}
+.time{font-size:12px;margin:3px 6px 0}
+.time.sent{color:var(--mute)}
+.tsep{align-self:center;font-size:12px;color:var(--mute);margin:14px 0 6px}
+
+/* typing bar: a growing pill, the send arrow shows only when there is text */
+.thread-f{flex:none;display:flex;align-items:flex-end;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--card)}
+.thread-f .msg-in{flex:1;min-width:0;min-height:42px;max-height:120px;resize:none;overflow-y:auto;font:inherit;font-size:16px;line-height:1.35;
+  padding:10px 18px!important;border:0!important;border-radius:22px!important;background:color-mix(in srgb,var(--ink) 7%,var(--card))!important;outline:0}
+.thread-f .msg-in:focus{box-shadow:0 0 0 2px color-mix(in srgb,var(--au2) 35%,transparent)}
+.thread-f .send{flex:none;width:42px;height:42px;border-radius:50%;border:0;display:grid;place-items:center;color:var(--au1);background:none;animation:sendIn .18s ease both}
+[data-theme=dark] .thread-f .send{color:#c4b5fd}
+.thread-f .send svg{width:26px;height:26px}
+@keyframes sendIn{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}

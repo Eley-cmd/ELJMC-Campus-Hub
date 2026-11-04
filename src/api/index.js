@@ -13,13 +13,14 @@ let _uid = null
 sb.auth.onAuthStateChange((_e, s) => { _uid = s?.user?.id ?? null })
 export const uid = async () => _uid ?? (_uid = (await sb.auth.getSession()).data.session?.user.id ?? null)
 const esc = (x) => String(x).replace(/[\\%_]/g, '\\$&') // escape LIKE wildcards
-const PUB = 'id,username,display_name,avatar_url,role,verified_badge,active_status'
+const PUB_BASE = 'id,username,display_name,avatar_url,role,verified_badge,active_status,updated_at'
+const pub = () => PUB_BASE + (caps.cover ? ',cover_url' : '') // cover_url only after you add that column (see the SQL)
 
 // Features that exist only in later migrations are detected once, never assumed.
-export const caps = { replies: false, ready: false }
+export const caps = { replies: false, cover: false, ready: false }
 export async function detectCaps() {
-  const r = await sb.from('feed_comments').select('parent_id').limit(1)
-  caps.replies = !r.error; caps.ready = true
+  const [r, c] = await Promise.all([sb.from('feed_comments').select('parent_id').limit(1), sb.from('profiles').select('cover_url').limit(1)])
+  caps.replies = !r.error; caps.cover = !c.error; caps.ready = true
   return caps
 }
 
@@ -47,8 +48,8 @@ export const auth = {
 
 /* ---------------------------- profiles ---------------------------- */
 export const profile = {
-  me: async () => sb.from('profiles').select(PUB + ',points_balance,theme_setting,created_at').eq('id', await uid()).single().then(ok),
-  byUsername: async (u) => ok(await sb.from('profiles').select(PUB + ',points_balance,created_at').ilike('username', esc(u)).limit(1))[0] || null,
+  me: async () => sb.from('profiles').select(pub() + ',points_balance,theme_setting,created_at').eq('id', await uid()).single().then(ok),
+  byUsername: async (u) => ok(await sb.from('profiles').select(pub() + ',points_balance,created_at').ilike('username', esc(u)).limit(1))[0] || null,
   usernameTaken: async (u) => ok(await sb.from('profiles').select('id').ilike('username', esc(u)).neq('id', await uid()).limit(1)).length > 0,
   private: async () => { const r = ok(await sb.rpc('get_my_private_profile')); return Array.isArray(r) ? r[0] : r },
   update: async (patch) => sb.from('profiles').update(patch).eq('id', await uid()).then(ok), // display_name, username, avatar_url, active_status, theme_setting
@@ -65,9 +66,9 @@ export const profile = {
   byIds: async (ids) => {
     ids = [...new Set((ids || []).filter(Boolean))]
     if (!ids.length) return {}
-    return Object.fromEntries(ok(await sb.from('profiles').select(PUB).in('id', ids)).map((r) => [r.id, r]))
+    return Object.fromEntries(ok(await sb.from('profiles').select(pub()).in('id', ids)).map((r) => [r.id, r]))
   },
-  search: (q) => sb.from('profiles').select(PUB).or(`username.ilike.%${q.replace(/[%,]/g, '')}%,display_name.ilike.%${q.replace(/[%,]/g, '')}%`).limit(12).then(ok),
+  search: (q) => sb.from('profiles').select(pub()).or(`username.ilike.%${q.replace(/[%,]/g, '')}%,display_name.ilike.%${q.replace(/[%,]/g, '')}%`).limit(12).then(ok),
 }
 
 // Web NFC: scan a physical RFID/NFC card with the phone, then pair it
@@ -404,7 +405,7 @@ export const admin = {
   },
   // Everyone using the app (public columns only), newest first
   users: async ({ q = '', from = 0, size = 30, unverified = false } = {}) => {
-    let b = sb.from('profiles').select(PUB + ',points_balance,created_at', { count: 'exact' }).order('created_at', { ascending: false }).range(from, from + size - 1)
+    let b = sb.from('profiles').select(pub() + ',points_balance,created_at', { count: 'exact' }).order('created_at', { ascending: false }).range(from, from + size - 1)
     if (q.trim()) { const t = esc(q.trim().replace(/[,()]/g, ' ')); b = b.or(`username.ilike.%${t}%,display_name.ilike.%${t}%`) }
     if (unverified) b = b.eq('role', 'student').eq('verified_badge', false)
     const { data, error, count } = await b

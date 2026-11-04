@@ -58,3 +58,15 @@ export function useTick(ms = 1000) {
   const [, set] = useState(0)
   useEffect(() => { const t = setInterval(() => set((x) => x + 1), ms); return () => clearInterval(t) }, [ms])
 }
+
+// Chat screens: follow the REAL visible height (so the typing bar stays above the phone keyboard)
+export function useViewportHeight(onChange) {
+  const cb = useRef(onChange); cb.current = onChange
+  useEffect(() => {
+    const vv = window.visualViewport; if (!vv) return
+    const root = document.documentElement.style
+    const set = () => { root.setProperty('--vvh', vv.height + 'px'); root.setProperty('--vvt', vv.offsetTop + 'px'); cb.current?.() }
+    set(); vv.addEventListener('resize', set); vv.addEventListener('scroll', set)
+    return () => { vv.removeEventListener('resize', set); vv.removeEventListener('scroll', set); root.removeProperty('--vvh'); root.removeProperty('--vvt') }
+  }, [])
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BadgeCheck, Ghost, RefreshCw, WifiOff, X, PawPrint, ImageOff, Inbox } from 'lucide-react'
 import { img } from '../lib/cloudinary'
-import { slug } from '../lib/format'
+import { slug, presence } from '../lib/format'
 import { ROLE_LABEL } from '../config'
 
 export function Avatar({ p, size = 44, anonymous, dot }) {
@@ -12,8 +12,8 @@ export function Avatar({ p, size = 44, anonymous, dot }) {
   if (anonymous || (!p)) inner = <div className="av anon" style={st}><Ghost size={size * 0.5} /></div>
   else if (p.avatar_url && !bad) inner = <img className="av" style={st} src={img(p.avatar_url, Math.max(120, size * 2))} alt="" onError={() => setBad(true)} loading="lazy" />
   else inner = <div className="av" style={st}>{(p.display_name || p.username || '?')[0].toUpperCase()}</div>
-  const status = p?.active_status
-  return <span className="avwrap">{inner}{dot && status && status !== 'offline' && <i className={'presence ' + status} />}</span>
+  const pr = presence(p)
+  return <span className="avwrap">{inner}{dot && (pr.online || pr.away) && <i className={'presence ' + (pr.online ? 'online' : 'away')} />}</span>
 }
 
 export const Name = ({ p, anonymous }) => (

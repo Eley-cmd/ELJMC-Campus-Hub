@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Settings as Gear, Camera, Coins, Gift, Star, MessageCircle, Pencil, ChevronRight, ShoppingBag, PawPrint, QrCode, CalendarDays, Ghost, ReceiptText, Shield, Store, Check, Flag, UserMinus, ChevronLeft } from 'lucide-react'
-import { profile, points, friends, chat } from '../api'
-import { uploadImage } from '../lib/cloudinary'
+import { Settings as Gear, Camera, Coins, Gift, Star, MessageCircle, Pencil, ChevronRight, ShoppingBag, PawPrint, QrCode, CalendarDays, Ghost, ReceiptText, Shield, Store, Check, Flag, UserMinus, ChevronLeft, Trash2 } from 'lucide-react'
+import { profile, points, friends, chat, caps } from '../api'
+import { uploadImage, img } from '../lib/cloudinary'
 import { levelInfo } from '../lib/level'
 import { useQuery } from '../ui/hooks'
 import { ProfileSkeleton, Bar } from '../ui/Skeleton'
@@ -11,10 +11,17 @@ import FeedList from '../components/FeedList'
 import ReportSheet from '../components/Report'
 import { useBoards } from './Home'
 import { useApp } from '../app/context'
-import { ROLE_LABEL, COVER } from '../config'
+import { ROLE_LABEL } from '../config'
 import { errText } from '../lib/errors'
+import { presence } from '../lib/format'
 
-function Cover() { const [bad, setBad] = useState(false); return <div className="cover">{!bad && <img src={COVER} alt="" onError={() => setBad(true)} />}</div> }
+// Cover: your photo if you added one, otherwise the same violet header and wave as the login screen.
+function Cover({ url, children }) {
+  return <div className="cover">{url && <img className="cover-img" src={img(url, 1000)} alt="" />}
+    <svg className="cover-wave" viewBox="0 0 480 100" preserveAspectRatio="none" aria-hidden="true">
+      <path className="w1" d="M0 58 C 80 22 160 26 250 60 S 410 88 480 42 L480 100 L0 100 Z" /><path className="w2" d="M0 66 C 90 30 170 36 260 68 S 400 84 480 56 L480 100 L0 100 Z" /></svg>{children}</div>
+}
+const COVER_KEY = (id) => 'eljmc.cover.' + id
 
 function EditProfile({ onClose }) {
   const { me, reloadMe, toast } = useApp(); const ref = useRef()
@@ -44,14 +51,37 @@ const MENU = [[ReceiptText, 'My orders', '/orders'], [Store, 'Shop Nav (my shop)
 export function MyProfile() {
   const { me, meError, reloadMe, toast, isAdmin } = useApp(); const [edit, setEdit] = useState(false); const boards = useBoards()
   const earned = useQuery('earned', points.earned); const pets = useQuery('pets', points.pets); const mine = useQuery('mypets', points.myPets)
+  const fileRef = useRef(); const coverRef = useRef(); const [pic, setPic] = useState(false); const [cov, setCov] = useState(false)
+  const [localCover, setLocalCover] = useState(() => { try { return localStorage.getItem(COVER_KEY(me?.id)) || '' } catch { return '' } })
+  // The cover is saved in the profile when the database has a cover_url column, otherwise only on this device.
+  const coverUrl = caps.cover ? me?.cover_url : localCover
+  const saveCover = async (url) => {
+    if (caps.cover) { await profile.update({ cover_url: url || null }); await reloadMe() }
+    else { try { url ? localStorage.setItem(COVER_KEY(me.id), url) : localStorage.removeItem(COVER_KEY(me.id)) } catch { /* ignore */ } setLocalCover(url || '') }
+  }
+  const changeCover = async (f) => {
+    if (!f) return; setCov(true)
+    try { await saveCover(await uploadImage(f, 1400)); toast(caps.cover ? 'Cover photo updated' : 'Cover saved on this device. Run the cover SQL so everyone can see it.') }
+    catch (e) { toast(errText(e), 'err') } finally { setCov(false) }
+  }
+  const changePic = async (f) => {
+    if (!f) return; setPic(true)
+    try { const url = await uploadImage(f, 600); await profile.update({ avatar_url: url }); await reloadMe(); toast('Photo updated') }
+    catch (e) { toast(errText(e), 'err') } finally { setPic(false) }
+  }
   const eq = mine.data?.find((u) => u.is_equipped); const pet = pets.data?.find((p) => p.id === eq?.pet_id)
   const claim = async () => { try { const n = await points.claimDaily(); toast(n ? `+${n} points added` : 'Already claimed today'); reloadMe(); earned.reload() } catch (e) { toast(errText(e), 'err') } }
   if (!me) return meError ? <ErrorBox error={meError} retry={reloadMe} /> : <ProfileSkeleton />
   const L = levelInfo(earned.data || 0)
   return <>
-    <div className="profile-top"><Cover /><Link to="/settings" className="gear" aria-label="Settings"><Gear size={22} /></Link></div>
+    <div className="profile-top"><Cover url={coverUrl}>{cov && <span className="avbusy" style={{ borderRadius: 0 }} />}
+      <div className="cover-actions"><button type="button" className="cover-btn" disabled={cov} onClick={() => coverRef.current.click()}><Camera size={15} /> {coverUrl ? 'Change cover' : 'Add cover photo'}</button>
+        {coverUrl && <button type="button" className="cover-btn" disabled={cov} aria-label="Remove cover photo" onClick={async () => { try { await saveCover(''); toast('Cover removed') } catch (e) { toast(errText(e), 'err') } }}><Trash2 size={15} /></button>}</div>
+      <input ref={coverRef} hidden type="file" accept="image/*" onChange={(e) => { changeCover(e.target.files[0]); e.target.value = '' }} /></Cover>
+      <Link to="/settings" className="gear" aria-label="Settings"><Gear size={22} /></Link></div>
     <div className="card profile-card">
-      <div className="row top"><div className="avbig"><Avatar p={me} size={84} dot /></div><div className="grow" />{pet && <PetImg p={pet} size={64} />}</div>
+      <div className="row top"><div className="avbig"><button type="button" className="avpick" disabled={pic} onClick={() => fileRef.current.click()} aria-label="Change profile photo"><Avatar p={me} size={84} dot />{pic && <span className="avbusy" />}<span className="avcam"><Camera size={16} /></span></button>
+        <input ref={fileRef} hidden type="file" accept="image/*" onChange={(e) => { changePic(e.target.files[0]); e.target.value = '' }} /></div><div className="grow" />{pet && <PetImg p={pet} size={64} />}</div>
       <div className="row wrap tight" style={{ marginTop: 8 }}><h2 className="pname"><Name p={me} /></h2></div>
       <div className="mute">@{me.username} - {ROLE_LABEL[me.role] || me.role}</div>
       <div className="lvl"><div className="row between"><b><Star size={15} /> Level {L.level}</b><span className="mute small">{earned.loading ? '' : `${L.earned} / ${L.to} pts`}</span></div>
@@ -71,16 +101,17 @@ export function MyProfile() {
 export function UserProfile() {
   const { username } = useParams(); const nav = useNavigate(); const { me, toast } = useApp(); const boards = useBoards()
   const u = useQuery('user:' + username, () => profile.byUsername(username))
-  const rel = useQuery('rel:' + (u.data?.id || ''), () => (u.data ? friends.isFriend(u.data.id) : null))
+  const rel = useQuery('rel:' + (u.data?.id || ''), async () => (u.data ? friends.isFriend(u.data.id) : null))
   const [sheet, setSheet] = useState(null)
   if (u.data && me && u.data.id === me.id) { nav('/profile', { replace: true }); return null }
   const msg = async () => { try { nav(`/chat/${await chat.openDm(u.data.id)}`) } catch (e) { toast(errText(e), 'err') } }
   return <>
-    <div className="profile-top"><Cover /><button className="gear" onClick={() => nav(-1)} aria-label="Back"><ChevronLeft size={22} /></button></div>
+    <div className="profile-top"><Cover url={u.data?.cover_url} /><button className="gear" onClick={() => nav(-1)} aria-label="Back"><ChevronLeft size={22} /></button></div>
     {u.loading ? <ProfileSkeleton /> : u.error && !u.data ? <ErrorBox error={u.error} retry={u.reload} />
       : !u.data ? <Empty Icon={Ghost} title="User not found" /> : <>
         <div className="card profile-card"><div className="avbig"><Avatar p={u.data} size={84} dot /></div>
           <h2 className="pname"><Name p={u.data} /></h2><div className="mute">@{u.data.username} - {ROLE_LABEL[u.data.role] || u.data.role}</div>
+          <div className="mute small"><span className={'pdot' + (presence(u.data).online ? ' on' : '')} />{presence(u.data).text}</div>
           <div className="row" style={{ marginTop: 12 }}><button className="btn sm" onClick={msg}><MessageCircle size={15} /> Message</button>
             {rel.data === 'accepted' && <button className="btn sm ghost" onClick={() => setSheet('unfriend')}><Check size={15} /> Friends</button>}
             <button className="btn sm ghost" onClick={() => setSheet('report')}><Flag size={15} /> Report</button></div>

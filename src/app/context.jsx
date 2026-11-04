@@ -29,7 +29,7 @@ export function AppProvider({ session, children }) {
   }, [])
   const reloadUnread = useCallback(() => notifications.unread().then(setUnread, () => {}), [])
 
-  useEffect(() => { reloadMe(); reloadUnread(); detectCaps().then(() => setCapsReady(true)); profile.mySuspension().then(setSuspension, () => {}) }, [reloadMe, reloadUnread])
+  useEffect(() => { reloadMe(); reloadUnread(); detectCaps().then(() => { setCapsReady(true); if (caps.cover) reloadMe() }); profile.mySuspension().then(setSuspension, () => {}) }, [reloadMe, reloadUnread])
 
   // The database lower-cases usernames at signup. Restore the case the person typed (only the case, nothing else).
   useEffect(() => {
@@ -40,6 +40,17 @@ export function AppProvider({ session, children }) {
     if (mine && w.username !== me.username && w.username.toLowerCase() === me.username.toLowerCase()) profile.update({ username: w.username }).then(reloadMe, () => {})
     if (mine) localStorage.removeItem('eljmc.wantedUsername')
   }, [me]) // eslint-disable-line
+
+  // Presence: while the app is open and visible, touch the profile every 2 minutes. Its updated_at is the "last active" time.
+  // Choosing Offline in Settings turns this off completely.
+  useEffect(() => {
+    if (!me) return
+    const pref = () => { try { return localStorage.getItem('eljmc.status') || 'online' } catch { return 'online' } }
+    const beat = () => { if (document.visibilityState === 'visible' && pref() !== 'offline') profile.update({ active_status: pref() }).catch(() => {}) }
+    const vis = () => (document.visibilityState === 'visible' ? beat() : pref() !== 'offline' && profile.update({ active_status: 'away' }).catch(() => {}))
+    beat(); const t = setInterval(beat, 120000); document.addEventListener('visibilitychange', vis)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', vis) }
+  }, [me?.id]) // eslint-disable-line
 
   // Daily login bonus (the server allows one per Manila day and returns 0 when already claimed)
   const claimed = useRef(false)

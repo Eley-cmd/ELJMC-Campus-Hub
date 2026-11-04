@@ -8,6 +8,7 @@ import { Skeletons, ListRowSkeleton, Bar } from '../ui/Skeleton'
 import { Avatar, Segmented, Empty, ErrorBox, Sheet, Confirm, Field } from '../components/ui'
 import { useApp } from '../app/context'
 import { errText } from '../lib/errors'
+import { presence } from '../lib/format'
 
 const PREFIX = 'ELJMC:'
 
@@ -68,7 +69,7 @@ export default function Friends() {
       : !fr.data?.length ? <Empty Icon={QrCode} title="No friends yet" hint="Scan a classmate's QR code to add them."><button className="btn sm" onClick={() => setScan(true)}>Scan a code</button></Empty>
       : <div className="card flush">{fr.data.map((u) => <div key={u.id} className="row pad">
         <Link to={`/profile/${u.username}`}><Avatar p={u} size={44} dot /></Link>
-        <Link to={`/profile/${u.username}`} className="grow"><b>{u.display_name}</b><div className="mute small">@{u.username}</div></Link>
+        <Link to={`/profile/${u.username}`} className="grow"><b>{u.display_name}</b><div className="mute small">@{u.username} - {presence(u).text}</div></Link>
         <button className="ibtn" aria-label="Message" onClick={() => dm(u)}><MessageCircle size={20} /></button>
         <button className="ibtn" aria-label="Remove friend" onClick={() => setRm(u)}><UserMinus size={20} /></button></div>)}</div>)}
 

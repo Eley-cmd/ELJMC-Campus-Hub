@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Ghost, Send, X, Flag, PowerOff, Search, ShieldCheck } from 'lucide-react'
 import { anon } from '../api'
-import { usePoll } from '../ui/hooks'
+import { usePoll, useViewportHeight } from '../ui/hooks'
 import { MessageSkeleton } from '../ui/Skeleton'
 import { Avatar, Empty, ErrorBox } from '../components/ui'
 import ReportSheet from '../components/Report'
@@ -15,7 +15,7 @@ export default function Anonymous() {
   const nav = useNavigate(); const { toast, suspension } = useApp()
   const [phase, setPhase] = useState('boot') // boot | idle | waiting | chat | ended
   const [tags, setTags] = useState([]); const [draft, setDraft] = useState(''); const [session, setSession] = useState(null); const [slot, setSlot] = useState('a')
-  const [msgs, setMsgs] = useState([]); const [t, setT] = useState(''); const [err, setErr] = useState(null); const [report, setReport] = useState(false); const end = useRef()
+  const [msgs, setMsgs] = useState([]); const [t, setT] = useState(''); const [err, setErr] = useState(null); const [report, setReport] = useState(false); const end = useRef(); const box = useRef(); const ta = useRef()
 
   const enter = (sid, s, sharedTags) => { setSession(sid); setSlot(s); setPhase('chat'); setMsgs(sharedTags?.length ? [{ id: 'sys-tags', slot: 's', content: `You both like: ${sharedTags.join(', ')}`, created_at: new Date().toISOString() }] : []) }
   // Resume an active session after a page reload
@@ -35,7 +35,11 @@ export default function Anonymous() {
   }, [phase, session])
   usePoll(() => anon.history(session).then(merge, () => {}), 3000, phase === 'chat') // fallback if the websocket drops on a poor network
   useEffect(() => { if (msgs.some((m) => m.slot === 's' && m.content === 'session_ended')) setPhase('ended') }, [msgs])
-  useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [msgs])
+  const toBottom = () => { const el = box.current; if (el) el.scrollTop = el.scrollHeight } // scroll the list only, never the page
+  useViewportHeight(toBottom)
+  useEffect(toBottom, [msgs, phase])
+  useEffect(() => { const el = ta.current; if (!el) return; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px' }, [t])
+  const fine = typeof matchMedia !== 'undefined' && matchMedia('(pointer: fine)').matches // Enter sends on a computer, adds a new line on a phone
 
   const addTag = () => { const v = draft.trim().toLowerCase().slice(0, 30); if (v && !tags.includes(v) && tags.length < 10) setTags([...tags, v]); setDraft('') }
   const start = async () => { setPhase('waiting'); setErr(null); await tryJoin() }
@@ -51,16 +55,17 @@ export default function Anonymous() {
 
   if (phase === 'boot') return <>{Head}<MessageSkeleton /></>
   if (phase === 'chat' || phase === 'ended') return <div className="thread">
-    <div className="thread-h row"><button className="ibtn" onClick={() => nav(-1)} aria-label="Back"><ChevronLeft /></button><Avatar anonymous size={36} /><b className="grow">Stranger</b>
+    <div className="thread-h row"><button className="ibtn" onClick={() => nav(-1)} aria-label="Back"><ChevronLeft /></button><Avatar anonymous size={40} /><div className="grow minw"><b className="ell" style={{ display: 'block' }}>Stranger</b><div className="mute small">{phase === 'ended' ? 'Chat ended' : 'Anonymous chat'}</div></div>
       {phase === 'chat' && <><button className="ibtn" aria-label="Report" onClick={() => setReport(true)}><Flag size={19} /></button><button className="ibtn" aria-label="End chat" onClick={end_}><PowerOff size={19} /></button></>}</div>
-    <div className="thread-b">
+    <div className="thread-b" ref={box}>
       <div className="notice"><ShieldCheck size={15} /> Messages are deleted when the chat ends. A moderation copy is kept for 90 days.</div>
       {msgs.filter((m) => m.content !== 'session_ended').map((m) => m.slot === 's' ? <div key={m.id} className="mute center small">{m.content}</div>
         : <div key={m.id} className={'msg' + (m.slot === slot ? ' mine' : '')}>{m.slot !== slot && <Avatar anonymous size={30} />}<div className="bub-wrap"><div className="bubble">{m.content}</div><small className="mute time">{clock(m.created_at)}</small></div></div>)}
       {phase === 'ended' && <div className="card center" style={{ margin: '12px 0' }}><p>This chat has ended.</p><button className="btn" onClick={again}>Find someone new</button></div>}
       <div ref={end} /></div>
-    {phase === 'chat' && <div className="thread-f"><input className="msg-in" placeholder="Say something" maxLength={2000} value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} />
-      <button className="send" disabled={!t.trim()} onClick={send} aria-label="Send"><Send size={20} /></button></div>}
+    {phase === 'chat' && <div className="thread-f"><textarea ref={ta} className="msg-in" rows={1} placeholder="Aa" maxLength={2000} value={t} onChange={(e) => setT(e.target.value)}
+      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && fine) { e.preventDefault(); send() } }} />
+      {t.trim() && <button type="button" className="send" onClick={send} aria-label="Send"><Send size={20} /></button>}</div>}
     {report && <ReportSheet type="anonymous_session" id={session} onClose={() => setReport(false)} />}
   </div>
 
@@ -69,7 +74,7 @@ export default function Anonymous() {
       <p className="mute">Chat 1-on-1 with a classmate who shares your interests. Nobody sees your name.</p>
       {suspension && <div className="err">Your account is suspended, so matching is turned off.</div>}
       <div className="taginput"><div className="chips wrapchips">{tags.map((x) => <span key={x} className="chip-lite on">{x}<button aria-label={`Remove ${x}`} onClick={() => setTags(tags.filter((y) => y !== x))}><X size={12} /></button></span>)}</div>
-        <div className="row"><input className="input" placeholder={tags.length >= 10 ? 'Max 10 interests' : 'Add an interest, e.g. programming'} value={draft} disabled={tags.length >= 10} maxLength={30} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ',') && (e.preventDefault(), addTag())} />
+        <div className="row"><input className="input" placeholder={tags.length >= 10 ? 'Max 10 interests' : 'Add an interest, e.g. anime'} value={draft} disabled={tags.length >= 10} maxLength={30} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ',') && (e.preventDefault(), addTag())} />
           <button className="btn sm ghost" onClick={addTag} disabled={!draft.trim()}>Add</button></div></div>
       {err && <ErrorBox compact error={err} />}
       {phase === 'waiting' ? <><div className="radar"><Search size={22} /></div><p className="mute">Looking for someone{tags.length ? ' who likes ' + tags.slice(0, 3).join(', ') : ''}...</p><button className="btn ghost" onClick={cancel}>Cancel</button></>

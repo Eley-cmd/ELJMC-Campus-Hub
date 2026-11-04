@@ -19,3 +19,17 @@ export const countdown = (to) => {
 }
 // datetime-local <-> ISO
 export const toLocalInput = (d) => { const x = new Date(d), p = (n) => String(n).padStart(2, '0'); return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}T${p(x.getHours())}:${p(x.getMinutes())}` }
+
+// "Active now", "Away" or "Active 5m ago" from a profile row (needs active_status + updated_at).
+// Someone who chose Offline shows just "Offline" (their last activity stays private).
+export function presence(p) {
+  if (!p) return { online: false, away: false, text: '' }
+  const t = p.updated_at ? new Date(p.updated_at).getTime() : 0
+  const fresh = t && Date.now() - t < 5 * 60 * 1000
+  if (p.active_status === 'offline') return { online: false, away: false, text: 'Offline' }
+  if (fresh && p.active_status === 'online') return { online: true, away: false, text: 'Active now' }
+  if (fresh && p.active_status === 'away') return { online: false, away: true, text: 'Away' }
+  if (!t) return { online: false, away: false, text: 'Offline' }
+  const a = ago(p.updated_at)
+  return { online: false, away: false, text: a === 'now' ? 'Active just now' : /^\d+[mhd]$/.test(a) ? `Active ${a} ago` : `Active ${a}` }
+}
