@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MessageCircle, Send, MoreHorizontal, Pencil, Trash2, Flag, Link2, CalendarPlus, Check, Heart, X, ChevronLeft, ChevronRight, CalendarDays, BarChart3 } from 'lucide-react'
+import { MessageCircle, Send, MoreHorizontal, Pencil, Trash2, Flag, Link2, EyeOff, CalendarPlus, Check, Heart, X, ChevronLeft, ChevronRight, CalendarDays, BarChart3 } from 'lucide-react'
 import { feed, polls } from '../api'
 import { ago, dateTime, compact } from '../lib/format'
 import { googleCalendarUrl, downloadIcs } from '../lib/ics'
@@ -9,6 +9,8 @@ import { Avatar, Name, RoleTag, Img, Sheet, Confirm } from './ui'
 import ReportSheet from './Report'
 import ShareSheet from './ShareSheet'
 import { useApp } from '../app/context'
+import { hidden } from '../lib/hidden'
+import { ALLOW_AUTHOR_DELETE } from '../config'
 
 /* ----------------------------- media grid ----------------------------- */
 // Tap opens the photo viewer. Double tap hearts the post (like Instagram).
@@ -122,7 +124,7 @@ export default function Post({ p, boards = {}, full, onChange, onDeleted }) {
     }
   }
   const copyLink = async () => { try { await navigator.clipboard.writeText(`${location.origin}/post/${p.id}`); toast('Link copied') } catch { toast('Could not copy the link', 'err') } }
-  const mine = p.is_mine; const board = p.channel_id ? boards[p.channel_id] : null
+  const mine = p.is_mine; const canDelete = isAdmin || (mine && ALLOW_AUTHOR_DELETE); const board = p.channel_id ? boards[p.channel_id] : null
 
   return <article className="card post">
     <div className="row top">
@@ -135,8 +137,9 @@ export default function Post({ p, boards = {}, full, onChange, onDeleted }) {
         {menu && <div className="menu" onMouseLeave={() => setMenu(false)}>
           <button onClick={() => { setMenu(false); copyLink() }}><Link2 size={15} /> Copy link</button>
           {mine && <button onClick={() => { setMenu(false); setSheet('edit') }}><Pencil size={15} /> Edit</button>}
-          {(mine || isAdmin) && <button className="dng" onClick={() => { setMenu(false); setSheet('delete') }}><Trash2 size={15} /> Delete</button>}
-          {!mine && <button onClick={() => { setMenu(false); setSheet('report') }}><Flag size={15} /> Report</button>}</div>}</div>
+          <button onClick={() => { setMenu(false); hidden.hide(p.id); toast('Post hidden. You can show hidden posts again in Settings.'); onDeleted?.(p.id) }}><EyeOff size={15} /> Hide post</button>
+          {!mine && <button onClick={() => { setMenu(false); setSheet('report') }}><Flag size={15} /> Report</button>}
+          {canDelete && <button className="dng" onClick={() => { setMenu(false); setSheet('delete') }}><Trash2 size={15} /> Delete{isAdmin && !mine ? ' (admin)' : ''}</button>}</div>}</div>
     </div>
 
     {text && <div className={'body' + (full ? ' full' : '')} onClick={() => !full && nav(`/post/${p.id}`)} style={{ cursor: full ? 'auto' : 'pointer' }}>

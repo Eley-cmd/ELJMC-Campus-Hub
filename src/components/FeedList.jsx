@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { PenLine } from 'lucide-react'
 import { feed, PAGE } from '../api'
 import { useQuery, useInView } from '../ui/hooks'
+import { useHidden } from '../lib/hidden'
 import { Skeletons, PostSkeleton } from '../ui/Skeleton'
 import { ErrorBox, Empty } from './ui'
 import Post from './Post'
@@ -12,7 +13,8 @@ export default function FeedList({ rev, channelId, hot, events, past, authorId, 
   const first = useQuery(key, () => feed.list({ channelId, hot, events, past, authorId, limit: events ? 30 : undefined }))
   const [extra, setExtra] = useState([]); const [done, setDone] = useState(false); const [more, setMore] = useState(false); const [moreErr, setMoreErr] = useState(null)
   useEffect(() => { setExtra([]); setDone(false); setMoreErr(null) }, [key])
-  const posts = [...(first.data || []), ...extra.filter((e) => !(first.data || []).some((f) => f.id === e.id))]
+  const hiddenIds = useHidden()
+  const posts = [...(first.data || []), ...extra.filter((e) => !(first.data || []).some((f) => f.id === e.id))].filter((p) => !hiddenIds.has(p.id))
   const hasMore = !hot && !events && !!first.data && first.data.length >= PAGE && !done
   const loadMore = async () => {
     if (more || !posts.length) return; setMore(true); setMoreErr(null)

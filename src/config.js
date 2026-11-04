@@ -35,3 +35,7 @@ export const RULES = [
   'No spam, scams or selling outside Shop Nav.',
   'Report anything unsafe. It helps everyone on campus.',
 ]
+
+// Who can delete a post? Admins always can. Set this to true if authors may also delete their OWN posts.
+// Everyone else can only Hide a post (for themselves) or Report it.
+export const ALLOW_AUTHOR_DELETE = false

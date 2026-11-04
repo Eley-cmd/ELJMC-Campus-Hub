@@ -8,6 +8,7 @@ import { getTheme, saveTheme } from '../lib/theme'
 import { prefs } from '../lib/alerts'
 import { TERMS_VERSION } from '../config'
 import { errText } from '../lib/errors'
+import { hidden, useHidden } from '../lib/hidden'
 import { Section, Toggle, Field } from '../components/ui'
 import { Bar as SkBar } from '../ui/Skeleton'
 
@@ -31,7 +32,7 @@ export default function Settings() {
     if (!sid.trim()) return; setBusy(true)
     try { await profile.requestVerification(sid.trim()); setSid(''); toast('Sent. An admin will verify your ID.'); priv.reload() } catch (e) { toast(errText(e), 'err') } finally { setBusy(false) }
   }
-  const p = priv.data
+  const p = priv.data; const hiddenIds = useHidden()
   return <>
     <div className="page-title"><button className="ibtn" onClick={() => nav(-1)} aria-label="Back"><ChevronLeft /></button><h1>Settings</h1></div>
 
@@ -56,6 +57,10 @@ export default function Settings() {
         <Field label={p?.student_id_number ? 'Change Student ID (needs verification again)' : 'Student ID'}><div className="row"><input className="input" maxLength={32} value={sid} onChange={(e) => setSid(e.target.value)} placeholder="e.g. 2026-00123" /><button className="btn sm" disabled={busy || !sid.trim()} onClick={submitId}>Submit</button></div></Field>
         <div className="small mute">Signed in as {p?.email}</div></>}
     </div></Section>
+
+    <Section title="Hidden posts"><div className="card setcard">
+      <div className="small mute">Posts you hid are only hidden for you, on this device. Nobody else is affected.</div>
+      <button type="button" className="btn ghost" disabled={!hiddenIds.size} onClick={() => { hidden.clear(); toast('Hidden posts are back') }}>{hiddenIds.size ? `Show ${hiddenIds.size} hidden post${hiddenIds.size > 1 ? 's' : ''} again` : 'No hidden posts'}</button></div></Section>
 
     <Section title="About"><div className="card setcard">
       {install && <button className="btn ghost" onClick={() => { install.prompt(); setInstall(null) }}><Download size={17} /> Install app</button>}
