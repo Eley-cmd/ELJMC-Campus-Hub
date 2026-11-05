@@ -16,6 +16,15 @@
       localStorage.removeItem('eljmc.accent');
     } catch (e) {}
   </script>
+  <style>
+    /* Loading screen: your logo on dark violet. Used before the app starts and while it checks your login. */
+    .boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;background:linear-gradient(160deg,#140733,#4c1d95 70%,#6d28d9)}
+    .boot-logo{width:104px;height:104px;object-fit:contain;border-radius:50%;background:#fff;padding:10px;box-shadow:0 14px 40px rgba(0,0,0,.35);animation:bootPulse 1.6s ease-in-out infinite}
+    .boot-bar{width:120px;height:5px;border-radius:99px;background:linear-gradient(90deg,rgba(255,255,255,.18) 25%,rgba(255,255,255,.55) 50%,rgba(255,255,255,.18) 75%);background-size:200% 100%;animation:bootBar 1.3s linear infinite}
+    @keyframes bootPulse{50%{transform:scale(1.06)}}
+    @keyframes bootBar{to{background-position:-200% 0}}
+    @media(prefers-reduced-motion:reduce){.boot-logo,.boot-bar{animation:none}}
+  </style>
 </head>
-<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>
+<body><div id="root"><div class="boot"><img class="boot-logo" src="/assets/eljmc-logo.png" alt="" onerror="this.style.display='none'" /><div class="boot-bar"></div></div></div><script type="module" src="/src/main.jsx"></script></body>
 </html>

@@ -3,6 +3,7 @@ import { Flame } from 'lucide-react'
 import { channels } from '../api'
 import { useQuery } from '../ui/hooks'
 import { PageTitle } from '../components/ui'
+import SearchResults, { SearchBar } from '../components/Search'
 import Banner from '../components/Banner'
 import Composer from '../components/Composer'
 import FeedList from '../components/FeedList'
@@ -17,10 +18,11 @@ export const useBoards = () => {
 // Home is the feed. Chats live in their own tab in the bottom nav.
 export default function Home() {
   const [rev, setRev] = useState(0)
-  const boards = useBoards(); const [chId, setCh] = useState(''); const [hot, setHot] = useState(false)
+  const boards = useBoards(); const [chId, setCh] = useState(''); const [hot, setHot] = useState(false); const [q, setQ] = useState('')
   return <>
     <PageTitle>Community</PageTitle>
-    <>
+    <SearchBar value={q} onChange={setQ} placeholder="Search posts, people, channels, shops" />
+    {q.trim() ? <SearchResults q={q} boards={boards.map} /> : <>
       <Banner />
       <div className="chips" role="tablist" aria-label="Boards">
         <button className={hot ? 'on' : ''} onClick={() => setHot(!hot)}><Flame size={14} /> Hot</button>
@@ -29,6 +31,6 @@ export default function Home() {
       </div>
       <FeedList rev={rev} channelId={chId || undefined} hot={hot} boards={boards.map}
         top={!hot && <Composer boards={boards.list} channelId={chId} onPosted={() => setRev((r) => r + 1)} />} />
-    </>
+    </>}
   </>
 }

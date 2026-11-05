@@ -140,6 +140,7 @@ export const feed = {
     return enrich(ok(await q))
   },
   one: async (id) => (await enrich(ok(await sb.from('feed_posts').select('*').eq('id', id).limit(1))))[0] || null,
+  search: async (q) => enrich(ok(await sb.from('feed_posts').select('*').ilike('content', `%${esc(q.trim().replace(/[,()]/g, ' '))}%`).order('created_at', { ascending: false }).limit(10))),
   create: async ({ channel_id, content, media_urls = [], is_anonymous = false, is_event = false, event_time = null }) =>
     sb.from('posts').insert({ author_id: await uid(), channel_id: channel_id || null, content, media_urls, is_anonymous, is_event, event_time }).select().single().then(ok),
   edit: (id, patch) => sb.from('posts').update(patch).eq('id', id).then(ok), // content, media_urls, event_time only
@@ -346,7 +347,8 @@ export const shop = {
 /* ---------------------------- points & pets ---------------------------- */
 export const points = {
   claimDaily: () => sb.rpc('claim_daily_login').then(ok), // returns points added (0 = already claimed today, Manila day)
-  history: () => sb.from('point_transactions').select('*').order('created_at', { ascending: false }).limit(60).then(ok),
+  // only MY rows: the database lets admins read everyone's points, so the screen must filter by user itself
+  history: async () => sb.from('point_transactions').select('*').eq('user_id', await uid()).order('created_at', { ascending: false }).limit(60).then(ok),
   earned: async () => ok(await sb.from('point_transactions').select('amount,reason').eq('user_id', await uid()).gt('amount', 0)).filter((x) => x.reason !== 'Order Refund').reduce((a, x) => a + x.amount, 0),
   pets: () => sb.from('virtual_pets').select('*').order('store_cost_points').then(ok),
   myPets: async () => sb.from('user_pets').select('*').eq('user_id', await uid()).then(ok),

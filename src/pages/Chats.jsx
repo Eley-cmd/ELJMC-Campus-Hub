@@ -108,7 +108,7 @@ function ForwardSheet({ m, onClose }) {
 
 /* --------------------- messages + composer (used by chats AND channels) --------------------- */
 // Put it inside an element with className="thread" (or "thread embedded").
-export function ThreadBody({ id, members, isDirect, intro = null }) {
+export function ThreadBody({ id, members, isDirect, intro = null, variant, placeholder }) {
   const { me, toast } = useApp()
   const [msgs, setMsgs] = useState(null); const [err, setErr] = useState(null); const [text, setText] = useState(''); const [sending, setSending] = useState(false)
   const [senders, setSenders] = useState({}); const [reply, setReply] = useState(null); const [editing, setEditing] = useState(null)
@@ -196,6 +196,22 @@ export function ThreadBody({ id, members, isDirect, intro = null }) {
           const sameP = close(prev, m), sameN = close(m, next), sep = !prev || new Date(m.created_at) - new Date(prev.created_at) >= GAP
           const gone = !!m.deleted_at, rp = m.reply_to_id ? byId.get(m.reply_to_id) : null
           const more = <button type="button" className="msg-more" aria-label="Message options" onClick={() => setMenu(m)}><MoreHorizontal size={16} /></button>
+          // Discord-style channel chat: everyone on the left, name and time above the text, no bubbles
+          if (variant === 'discord') return <Fragment key={m.id}>
+            {sep && <div className="tsep">{dateTime(m.created_at)}</div>}
+            <div id={'m-' + m.id} className={'dmsg pop' + (sameP ? ' cont' : '') + (flash === m.id ? ' flash' : '')} onContextMenu={(e) => { e.preventDefault(); setMenu(m) }}
+              onPointerDown={() => press(m)} onPointerUp={unpress} onPointerLeave={unpress} onPointerCancel={unpress}>
+              {sameP ? <span className="dmsg-gap" /> : <Avatar p={u || { display_name: '?' }} size={40} />}
+              <div className="dmsg-body">
+                {!sameP && <div className="dmsg-head"><b>{u?.display_name || (mine ? me?.display_name : '...')}</b><small className="mute">{clock(m.created_at)}</small></div>}
+                {gone ? <i className="gone">Message removed</i> : <>
+                  {m.forwarded && <div className="fwdlabel"><Forward size={11} /> Forwarded</div>}
+                  {m.reply_to_id && <button type="button" className="quote" onClick={() => rp && jump(rp.id)}>
+                    <b>{rp ? nameOf(rp.sender_id) : 'Message'}</b><span>{rp ? (rp.deleted_at ? 'Message removed' : rp.content) : 'Original message'}</span></button>}
+                  <div className="dmsg-text">{linkify(m.content)}{m.edited_at && <span className="edited">edited</span>}</div></>}
+              </div>
+              {more}
+            </div></Fragment>
           return <Fragment key={m.id}>
             {sep && <div className="tsep">{dateTime(m.created_at)}</div>}
             <div id={'m-' + m.id} className={'msg pop' + (mine ? ' mine' : '') + (sameP ? ' g-top' : '') + (sameN ? ' g-bot' : '') + (flash === m.id ? ' flash' : '')}>
@@ -226,7 +242,7 @@ export function ThreadBody({ id, members, isDirect, intro = null }) {
       {editing ? <><Pencil size={16} /><div><b>Editing message</b><div className="mute ell">{editing.content}</div></div></>
         : <><Reply size={16} /><div><b>Replying to {nameOf(reply.sender_id)}</b><div className="mute ell">{reply.content}</div></div></>}
       <button type="button" className="ibtn" aria-label="Cancel" onClick={cancelBar}><X size={18} /></button></div>}
-    <div className="thread-f"><textarea ref={inRef} className="msg-in" rows={1} placeholder={editing ? 'Edit your message' : 'Aa'} maxLength={4000} value={text} onChange={onType}
+    <div className="thread-f"><textarea ref={inRef} className="msg-in" rows={1} placeholder={editing ? 'Edit your message' : placeholder || 'Aa'} maxLength={4000} value={text} onChange={onType}
       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && fine) { e.preventDefault(); send() } else if (e.key === 'Escape') cancelBar() }} />
       {text.trim() && <button type="button" className="send" onClick={send} disabled={sending} aria-label={editing ? 'Save' : 'Send'}>{editing ? <Check size={20} /> : <Send size={20} />}</button>}</div>
 

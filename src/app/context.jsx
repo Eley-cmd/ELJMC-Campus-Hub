@@ -5,6 +5,10 @@ import { alertUser } from '../lib/alerts'
 import { applyTheme, getTheme } from '../lib/theme'
 import { clearCache } from '../ui/hooks'
 import { cart } from './cart'
+import { hidden } from '../lib/hidden'
+
+// If a different account logs in on this device, nothing from the previous account may be shown (cached lists, cart, hidden posts)
+let lastUser = null
 
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
@@ -17,6 +21,7 @@ export function AppProvider({ session, children }) {
   const [toasts, setToasts] = useState([])
   const [, setCapsReady] = useState(false)
   const id = session.user.id
+  useState(() => { if (lastUser && lastUser !== id) { clearCache(); cart.clear() } lastUser = id; hidden.setUser(id) })
 
   const toast = useCallback((text, kind = 'ok', ms = 3200) => {
     const k = Math.random().toString(36).slice(2)

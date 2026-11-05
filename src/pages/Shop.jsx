@@ -5,6 +5,7 @@ import { shop } from '../api'
 import { useQuery, usePoll, useTick } from '../ui/hooks'
 import { Skeletons, ProductSkeleton } from '../ui/Skeleton'
 import { Img, Empty, ErrorBox } from '../components/ui'
+import { SearchBar } from '../components/Search'
 import { useApp } from '../app/context'
 import { useCart } from '../app/cart'
 import { peso, countdown, dateTime } from '../lib/format'
@@ -47,8 +48,7 @@ export default function Shop() {
   return <>
     <div className="page-title"><h1>Shop</h1><div className="grow" />
       <Link to="/orders" className="ibtn" aria-label="My orders"><ReceiptText size={23} /></Link><CartButton /></div>
-    <div className="shopsearch"><div className="inp"><Search size={18} /><input placeholder="Search products" value={q} onChange={(e) => setQ(e.target.value)} />
-      {q && <button className="ibtn" aria-label="Clear" onClick={() => setQ('')}><X size={16} /></button>}</div></div>
+    <SearchBar sticky value={q} onChange={setQ} placeholder="Search products" />
 
     {!q && (merchants.loading ? <div className="storerow">{Array.from({ length: 5 }, (_, i) => <div key={i} className="sk round" style={{ width: 64, height: 64, flex: 'none' }} />)}</div>
       : !!merchants.data?.length && <div className="storerow">{merchants.data.map((m) => <Link key={m.id} to={`/shop/${m.id}`} className="storepill"><span>{m.shop_name[0]?.toUpperCase()}</span><em className="ell">{m.shop_name}</em></Link>)}</div>)}
