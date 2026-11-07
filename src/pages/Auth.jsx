@@ -32,6 +32,13 @@ function Head({ size = 'mid', back }) {
   </div>
 }
 
+const oauthMessage = (m) => {
+  if (/database error saving new user/i.test(m)) return 'Your account could not be created (database error). The profile setup in Supabase needs fixing. Tell the admin.'
+  if (/unable to exchange external code/i.test(m)) return 'Google rejected the sign-in. Check the Google Client ID and Secret in Supabase (Authentication, Providers).'
+  if (/access_denied|denied/i.test(m)) return 'Sign-in was cancelled.'
+  return m
+}
+
 const RANK = { welcome: 0, login: 1, signup: 2, forgot: 2, confirm: 3 }
 
 const Pill = ({ children }) => <div className="au-field">{children}</div>
@@ -47,6 +54,13 @@ export default function Auth() {
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [info, setInfo] = useState('')
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   useEffect(() => { setErr(''); setInfo('') }, [step])
+  // Coming back from Google / Facebook with a problem: Supabase puts the reason in the address. Show it instead of hiding it.
+  useEffect(() => {
+    const q = new URLSearchParams(location.search), h = new URLSearchParams(location.hash.replace(/^#/, ''))
+    const raw = q.get('error_description') || h.get('error_description') || ''
+    if (!raw) return
+    setErr(oauthMessage(raw)); history.replaceState(null, '', location.pathname)
+  }, [])
 
   const run = async (fn) => { setBusy(true); setErr(''); try { await fn() } catch (e) { setErr(errText(e)) } finally { setBusy(false) } }
   const login = () => run(async () => {

@@ -17,12 +17,13 @@ const PUB_BASE = 'id,username,display_name,avatar_url,role,verified_badge,active
 const pub = () => PUB_BASE + (caps.cover ? ',cover_url' : '') // cover_url only after you add that column (see the SQL)
 
 // Features that exist only in later migrations are detected once, never assumed.
-export const caps = { replies: false, cover: false, ready: false }
-export async function detectCaps() {
-  const [r, c] = await Promise.all([sb.from('feed_comments').select('parent_id').limit(1), sb.from('profiles').select('cover_url').limit(1)])
-  caps.replies = !r.error; caps.cover = !c.error; caps.ready = true
+export const caps = { replies: false, cover: false, channelArt: false, ready: false }
+let capsPromise = null // probed once; screens that need it wait for the answer
+export const detectCaps = () => (capsPromise ||= (async () => {
+  const [r, c, a] = await Promise.all([sb.from('feed_comments').select('parent_id').limit(1), sb.from('profiles').select('cover_url').limit(1), sb.from('channels').select('photo_url,cover_url').limit(1)])
+  caps.replies = !r.error; caps.cover = !c.error; caps.channelArt = !a.error; caps.ready = true
   return caps
-}
+})())
 
 /* ------------------------------ auth ------------------------------ */
 export const auth = {
@@ -82,9 +83,12 @@ export async function scanAndPairRfid() {
 }
 
 /* ---------------------------- channels ---------------------------- */
+const chCols = () => 'id,name,category' + (caps.channelArt ? ',photo_url,cover_url' : '')
 export const channels = {
-  list: () => sb.from('channels').select('id,name,category').eq('is_direct', false).eq('is_private', false).order('name').then(ok),
-  one: (id) => sb.from('channels').select('id,name,category').eq('id', id).maybeSingle().then(ok),
+  // photo_url / cover_url exist only after the channel pictures SQL has been run
+  list: async () => { await detectCaps(); return sb.from('channels').select(chCols()).eq('is_direct', false).eq('is_private', false).order('name').then(ok) },
+  one: async (id) => { await detectCaps(); return sb.from('channels').select(chCols()).eq('id', id).maybeSingle().then(ok) },
+  update: (id, patch) => sb.from('channels').update(patch).eq('id', id).then(ok), // admin only (RLS)
   create: (name, category) => sb.from('channels').insert({ name, category, is_private: false }).select().single().then(ok), // admin only (RLS)
   remove: (id) => sb.from('channels').delete().eq('id', id).then(ok),                                                   // admin only (RLS)
 }

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ChevronDown, Hash, CalendarDays, Ghost, ShoppingBag, PawPrint, QrCode, Hash as HashIcon, Plus, MessagesSquare, FileText } from 'lucide-react'
-import { channels } from '../api'
+import { ChevronLeft, ChevronRight, ChevronDown, Camera, Hash, CalendarDays, Ghost, ShoppingBag, PawPrint, QrCode, Hash as HashIcon, Plus, MessagesSquare, FileText } from 'lucide-react'
+import { channels, caps } from '../api'
+import { uploadImage, img } from '../lib/cloudinary'
 import { chatx } from '../lib/chatx'
 import { useQuery } from '../ui/hooks'
 import { Skeletons, ListRowSkeleton } from '../ui/Skeleton'
@@ -55,30 +56,54 @@ export default function Channels() {
             {closed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}<span>{meta.label}</span><em>{items.length}</em></button>
             {isAdmin && <button type="button" className="dc-plus" aria-label={`New channel in ${meta.label}`} onClick={() => setCreate(cat)}><Plus size={16} /></button>}</div>
           {!closed && items.map((c) => <Link key={c.id} to={`/channel/${c.id}`} className="dc-ch">
-            <span className="dc-av"><Hash size={20} /></span>
+            <span className="dc-av">{c.photo_url ? <img src={img(c.photo_url, 120)} alt="" /> : <Hash size={20} />}</span>
             <span className="dc-meta"><b className="ell">{c.name}</b><span className="ell">{meta.label} - Public channel</span></span>
             <ChevronRight size={18} className="mute" /></Link>)}</div> })}</div>}
     {create && <CreateChannel category={create} onClose={() => setCreate(null)} onDone={reload} />}
   </>
 }
 
-/* One channel: a Facebook-Page header (cover, picture, name) with Posts and Chat tabs. Chat looks like Discord. */
+/* One channel: a Facebook-Page header (cover, picture, name) with Posts and Chat tabs. Chat opens full screen and looks like Discord. */
 export function ChannelPage() {
-  const { id } = useParams(); const nav = useNavigate(); const boards = useBoards()
-  const [tab, setTab] = useState('posts')
+  const { id } = useParams(); const nav = useNavigate(); const boards = useBoards(); const { me, toast } = useApp(); const isAdmin = me?.role === 'admin'
+  const [tab, setTab] = useState('posts'); const [busy, setBusy] = useState(''); const coverRef = useRef(); const photoRef = useRef()
   const ch = useQuery('channel:' + id, () => channels.one(id))
   const m = categoryMeta(ch.data?.category)
-  return <div className={'chpage' + (tab === 'chat' ? ' chat-on' : '')}>
-    <div className="fbp-cover"><button type="button" className="gear" onClick={() => nav('/channels')} aria-label="Back"><ChevronLeft size={22} /></button></div>
+  const name = ch.data?.name || 'channel'
+
+  // Only admins can change a channel's picture or cover (the database allows admins only)
+  const setArt = async (field, file, max) => {
+    if (!file) return
+    if (!caps.channelArt) return toast('Channel pictures need one small database update first. Run the "channel pictures" SQL in Supabase.', 'err', 6000)
+    setBusy(field)
+    try { await channels.update(id, { [field]: await uploadImage(file, max) }); toast(field === 'cover_url' ? 'Cover updated' : 'Picture updated'); await ch.reload() }
+    catch (e) { toast(errText(e), 'err') } finally { setBusy('') }
+  }
+  const Tile = ({ size = 40 }) => <span className="dc-av" style={{ width: size, height: size, flex: 'none' }}>{ch.data?.photo_url ? <img src={img(ch.data.photo_url, 160)} alt="" /> : <Hash size={size * 0.5} />}</span>
+
+  if (tab === 'chat') return <div className="thread dc-full">
+    <div className="thread-h row"><button type="button" className="ibtn" onClick={() => setTab('posts')} aria-label="Back to the channel"><ChevronLeft size={26} /></button>
+      <Tile />
+      <div className="grow minw"><b className="ell" style={{ display: 'block' }}># {name}</b><div className="mute small ell">{m.label} - Public channel</div></div></div>
+    <ThreadBody id={id} isDirect={false} variant="discord" placeholder={`Message #${name}`} />
+  </div>
+
+  return <div className="chpage">
+    <div className="fbp-cover">
+      {ch.data?.cover_url && <img className="fbp-cover-img" src={img(ch.data.cover_url, 1000)} alt="" />}
+      <button type="button" className="gear" onClick={() => nav('/channels')} aria-label="Back"><ChevronLeft size={22} /></button>
+      {isAdmin && <div className="cover-actions"><button type="button" className="cover-btn" disabled={busy === 'cover_url'} onClick={() => coverRef.current.click()}><Camera size={15} /> {ch.data?.cover_url ? 'Change cover' : 'Add cover'}</button></div>}
+      <input ref={coverRef} hidden type="file" accept="image/*" onChange={(e) => { setArt('cover_url', e.target.files[0], 1400); e.target.value = '' }} /></div>
     <div className="fbp-head">
-      <div className="fbp-av"><Hash size={34} /></div>
+      <div className="fbp-av">{ch.data?.photo_url ? <img src={img(ch.data.photo_url, 240)} alt="" /> : <Hash size={34} />}
+        {busy === 'photo_url' && <span className="avbusy" />}
+        {isAdmin && <><button type="button" className="avcam" aria-label="Change channel picture" disabled={busy === 'photo_url'} onClick={() => photoRef.current.click()}><Camera size={16} /></button>
+          <input ref={photoRef} hidden type="file" accept="image/*" onChange={(e) => { setArt('photo_url', e.target.files[0], 600); e.target.value = '' }} /></>}</div>
       <div className="fbp-title">{ch.data ? <><h1 className="ell">{ch.data.name}</h1><div className="mute"><m.Icon size={14} /> {m.label} - Public channel</div></>
         : <><span className="sk" style={{ display: 'block', width: 170, height: 22 }} /><span className="sk" style={{ display: 'block', width: 120, height: 12, marginTop: 8 }} /></>}</div></div>
     <div className="pagetabs" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'posts'} className={tab === 'posts' ? 'on' : ''} onClick={() => setTab('posts')}><FileText size={16} /> Posts</button>
-      <button type="button" role="tab" aria-selected={tab === 'chat'} className={tab === 'chat' ? 'on' : ''} onClick={() => setTab('chat')}><MessagesSquare size={16} /> Chat</button></div>
-    {tab === 'posts'
-      ? <FeedList channelId={id} boards={boards.map} top={<Composer boards={boards.list} channelId={id} onPosted={() => nav(0)} />} />
-      : <div className="thread embedded dc-chat"><ThreadBody id={id} isDirect={false} variant="discord" placeholder={`Message #${ch.data?.name || 'channel'}`} /></div>}
+      <button type="button" role="tab" aria-selected className="on" onClick={() => setTab('posts')}><FileText size={16} /> Posts</button>
+      <button type="button" role="tab" aria-selected={false} onClick={() => setTab('chat')}><MessagesSquare size={16} /> Chat</button></div>
+    <FeedList channelId={id} boards={boards.map} top={<Composer boards={boards.list} channelId={id} onPosted={() => nav(0)} />} />
   </div>
 }
